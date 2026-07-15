@@ -57,6 +57,37 @@ function fromCI() {
   }
 }
 
+
+function fromUpstreamPin() {
+  // Corpus12 white-label: pin first-launch bootstrap to the *upstream Hermes*
+  // release SHA, not the brand commit (which is not on NousResearch/hermes-agent).
+  const pinPath = path.join(REPO_ROOT, "branding", "upstream-pin.json")
+  if (fs.existsSync(pinPath)) {
+    try {
+      const pin = JSON.parse(fs.readFileSync(pinPath, "utf8"))
+      if (pin && typeof pin.commit === "string" && pin.commit.length >= 7) {
+        return {
+          commit: pin.commit,
+          branch: pin.tag || pin.branch || null,
+          dirty: false,
+          source: "upstream-pin"
+        }
+      }
+    } catch (err) {
+      console.warn("[write-build-stamp] could not parse branding/upstream-pin.json:", err.message)
+    }
+  }
+  if (process.env.CORPUS12_UPSTREAM_SHA) {
+    return {
+      commit: process.env.CORPUS12_UPSTREAM_SHA,
+      branch: process.env.CORPUS12_UPSTREAM_TAG || process.env.GITHUB_REF_NAME || null,
+      dirty: false,
+      source: "env"
+    }
+  }
+  return null
+}
+
 function fromLocalGit() {
   const sha = tryExec("git rev-parse HEAD", { cwd: REPO_ROOT })
   if (!sha) return null
@@ -78,7 +109,7 @@ function fromLocalGit() {
 }
 
 function main() {
-  const stamp = fromCI() || fromLocalGit()
+  const stamp = fromUpstreamPin() || fromCI() || fromLocalGit()
   if (!stamp || !stamp.commit) {
     console.error(
       "[write-build-stamp] ERROR: could not determine git commit.\n" +
