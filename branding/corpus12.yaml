@@ -1,0 +1,23 @@
+name: corpus12
+description: Corpus12 by Falcon Global
+branding:
+  agent_name: "Corpus12"
+  welcome: "Your business, in one mind."
+  goodbye: "Goodbye from Corpus12."
+  response_label: " ◆ Corpus12 "
+  prompt_symbol: "❯"
+  help_header: "Corpus12 commands"
+colors:
+  banner_border: "#C7A25A"
+  banner_title: "#C7A25A"
+  banner_accent: "#2C8A7E"
+  banner_dim: "#5E7385"
+  banner_text: "#EAF0EF"
+  ui_accent: "#2C8A7E"
+  ui_label: "#C7A25A"
+  ui_ok: "#4caf50"
+  ui_error: "#ef5350"
+  ui_warn: "#ffa726"
+  prompt: "#EAF0EF"
+  input_rule: "#C7A25A"
+  response_border: "#C7A25A"

@@ -1,10 +1,10 @@
 {
-  "name": "hermes",
-  "productName": "Hermes",
+  "name": "corpus12",
+  "productName": "Corpus12",
   "private": true,
-  "version": "0.17.0",
-  "description": "Native desktop shell for Hermes Agent.",
-  "author": "Nous Research",
+  "version": "1.0.0",
+  "description": "Corpus12 by Falcon Global \u2014 native desktop shell powered by Hermes Agent.",
+  "author": "Falcon Global Services",
   "type": "module",
   "main": "electron/main.cjs",
   "engines": {
@@ -148,18 +148,18 @@
   },
   "build": {
     "electronVersion": "40.10.2",
-    "appId": "com.nousresearch.hermes",
-    "productName": "Hermes",
-    "executableName": "Hermes",
+    "appId": "com.falconglobal.corpus12",
+    "productName": "Corpus12",
+    "executableName": "Corpus12",
     "protocols": [
       {
-        "name": "Hermes Protocol",
+        "name": "Corpus12 Protocol",
         "schemes": [
-          "hermes"
+          "corpus12"
         ]
       }
     ],
-    "artifactName": "Hermes-${version}-${os}-${arch}.${ext}",
+    "artifactName": "Corpus12-${version}-${os}-${arch}.${ext}",
     "icon": "assets/icon",
     "directories": {
       "output": "release"
@@ -200,11 +200,11 @@
       "entitlements": "electron/entitlements.mac.plist",
       "entitlementsInherit": "electron/entitlements.mac.inherit.plist",
       "extendInfo": {
-        "CFBundleDisplayName": "Hermes",
-        "CFBundleExecutable": "Hermes",
-        "CFBundleName": "Hermes",
-        "NSAudioCaptureUsageDescription": "Hermes uses audio capture for voice conversations.",
-        "NSMicrophoneUsageDescription": "Hermes uses the microphone for voice input and voice conversations."
+        "CFBundleDisplayName": "Corpus12",
+        "CFBundleExecutable": "Corpus12",
+        "CFBundleName": "Corpus12",
+        "NSAudioCaptureUsageDescription": "Corpus12 uses audio capture for voice conversations.",
+        "NSMicrophoneUsageDescription": "Corpus12 uses the microphone for voice input and voice conversations."
       },
       "gatekeeperAssess": false,
       "hardenedRuntime": true,
@@ -214,7 +214,7 @@
       ]
     },
     "dmg": {
-      "title": "Install Hermes",
+      "title": "Install Corpus12",
       "backgroundColor": "#f5f5f7",
       "iconSize": 96,
       "window": {
@@ -236,7 +236,7 @@
       ]
     },
     "win": {
-      "legalTrademarks": "Hermes",
+      "legalTrademarks": "Corpus12 by Falcon Global Services",
       "target": [
         "nsis",
         "msi"
@@ -245,8 +245,8 @@
     },
     "linux": {
       "category": "Development",
-      "maintainer": "Nous Research <support@nousresearch.com>",
-      "synopsis": "Native desktop shell for Hermes Agent.",
+      "maintainer": "Falcon Global Services <support@falconglobal.services>",
+      "synopsis": "Corpus12 by Falcon Global \u2014 desktop shell for your business agent.",
       "target": [
         "AppImage",
         "deb",
@@ -257,9 +257,10 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,
-      "shortcutName": "Hermes",
-      "uninstallDisplayName": "Hermes",
+      "shortcutName": "Corpus12",
+      "uninstallDisplayName": "Corpus12",
       "warningsAsErrors": false
     }
-  }
+  },
+  "homepage": "https://falconglobal.services"
 }

@@ -21,7 +21,7 @@ import {
 import { ListRow, SectionHeading, SettingsContent } from './primitives'
 import { UninstallSection } from './uninstall-section'
 
-const RELEASE_NOTES_URL = 'https://github.com/NousResearch/hermes-agent/releases'
+const RELEASE_NOTES_URL = 'https://github.com/NousResearch/hermes-agent/releases' // upstream; Corpus12 ships Falcon-managed builds
 
 function relativeTime(ms: number | undefined, a: Translations['settings']['about']) {
   if (!ms) {
@@ -101,6 +101,9 @@ export function AboutSettings() {
           <h2 className="text-lg font-semibold tracking-tight">{a.heading}</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             {version?.appVersion ? a.version(version.appVersion) : a.versionUnavailable}
+          </p>
+          <p className="mt-2 max-w-sm text-[11px] leading-relaxed text-muted-foreground/90">
+            Corpus12 by Falcon Global Services. Includes open-source Hermes Agent (MIT) by Nous Research.
           </p>
         </div>
       </div>

@@ -68,14 +68,14 @@ async function stampExeIdentity(exe, desktopRoot = path.resolve(__dirname, '..')
   await rcedit(exe, {
     icon,
     'version-string': {
-      ProductName: 'Hermes',
-      FileDescription: 'Hermes',
-      CompanyName: 'Nous Research',
-      LegalCopyright: 'Copyright (c) 2026 Nous Research'
+      ProductName: 'Corpus12',
+      FileDescription: 'Corpus12 by Falcon Global',
+      CompanyName: 'Falcon Global Services',
+      LegalCopyright: 'Copyright (c) 2026 Falcon Global Services. Hermes Agent (MIT) © Nous Research.'
     }
   })
 
-  console.log('[set-exe-identity] done — Hermes icon + identity stamped')
+  console.log('[set-exe-identity] done — Corpus12 icon + identity stamped')
 }
 
 module.exports = { stampExeIdentity }
