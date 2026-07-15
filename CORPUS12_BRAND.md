@@ -28,3 +28,10 @@ npm run dist:mac:dmg   # or npm run pack for unpacked .app
 ```
 
 Artifacts: `apps/desktop/release/Corpus12-1.0.0-mac-arm64.dmg` (arch varies)
+
+## Build status (2026-07-14)
+
+- **macOS arm64 DMG:** `dist/Corpus12-1.0.0-mac-arm64.dmg` (~127 MB)
+- **Signed:** Apple Development (davidfu84@gmail.com) — not notarized
+- **Smoke:** app launches; backend ready when Hermes root available
+- **Install stamp:** upstream pin `9de9c25` / tag `v2026.7.7.2`
