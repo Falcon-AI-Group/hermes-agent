@@ -2056,16 +2056,42 @@ def _local_dashboard_request(request: Request) -> bool:
 
 
 def _default_hermes_root_is_opt_data() -> bool:
-    raw = os.environ.get("HERMES_HOME", "").strip()
-    if not raw:
-        return False
-    try:
-        from hermes_constants import get_default_hermes_root
+    """True when this deployment's Hermes root is the hosted /opt/data layout.
 
-        root = get_default_hermes_root().expanduser().resolve(strict=False)
+    Process/container identity only — deliberately NOT ContextVar-override-aware.
+    ``get_hermes_home()`` answers a request/profile-scoped question; this
+    function answers "is this the hosted /opt/data deployment at all". Making
+    it override-aware lets a profile-subdir override flip hosted identity
+    incorrectly (Brienne FAIL on PR #1 / 1a58a819; plan caution in
+    PLAN__hermes_desktop_file_drop_path_regression__2026-07-22.md §3).
+
+    Checks, in order:
+
+    1. Raw ``HERMES_HOME`` env var, resolved via ``get_default_hermes_root()``
+       (handles Docker custom-root and profile-path parent-walk) — original
+       pre-bug behavior when the var is present.
+    2. ``Path.home()`` when HERMES_HOME is empty. The hosted container
+       entrypoint (docker/main-wrapper.sh, docker/s6-rc.d/dashboard/run)
+       independently pins ``HOME=/opt/data`` before HERMES_HOME is ever
+       read. If HERMES_HOME was dropped in a spawn/exec chain but HOME still
+       carries that pin, trust it rather than unlocking
+       ``_managed_files_policy`` to Path.home()-as-code-install
+       (``/opt/hermes``) — the exact desktop Files 403 symptom.
+    """
+    from hermes_constants import get_default_hermes_root
+
+    raw = os.environ.get("HERMES_HOME", "").strip()
+    if raw:
+        try:
+            root = get_default_hermes_root().expanduser().resolve(strict=False)
+        except (OSError, RuntimeError):
+            root = Path(raw).expanduser().resolve(strict=False)
+        return root == _HOSTED_MANAGED_FILES_ROOT
+
+    try:
+        return Path.home().resolve(strict=False) == _HOSTED_MANAGED_FILES_ROOT
     except (OSError, RuntimeError):
-        root = Path(raw).expanduser().resolve(strict=False)
-    return root == _HOSTED_MANAGED_FILES_ROOT
+        return False
 
 
 def _dashboard_local_update_managed_externally() -> bool:
