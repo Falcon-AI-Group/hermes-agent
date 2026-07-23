@@ -1449,40 +1449,27 @@ def _local_dashboard_request(request: Request) -> bool:
 def _default_hermes_root_is_opt_data() -> bool:
     """True when this deployment's Hermes root is the hosted /opt/data layout.
 
-    Checked in order, each a progressively weaker signal:
+    Process/container identity only — deliberately NOT ContextVar-override-aware.
+    ``get_hermes_home()`` answers a request/profile-scoped question; this
+    function answers "is this the hosted /opt/data deployment at all". Making
+    it override-aware lets a profile-subdir override flip hosted identity
+    incorrectly (Brienne FAIL on PR #1 / 1a58a819; plan caution in
+    PLAN__hermes_desktop_file_drop_path_regression__2026-07-22.md §3).
 
-    1. The request/task-scoped HERMES_HOME override (``set_hermes_home_override``,
-       ``hermes_constants.py``). This is the same seam ``get_hermes_home()``
-       honors everywhere else it's consumed (config, skills, cron — see
-       ``_profile_scope``/``_config_profile_scope`` in this module). Previously
-       this function read raw ``os.environ`` only, so a profile-scoped override
-       could never flip it — an asymmetry vs. every other HERMES_HOME consumer
-       (2026-07-22 desktop file-drop investigation,
-       PLAN__hermes_desktop_file_drop_path_regression__2026-07-22.md).
-    2. The raw ``HERMES_HOME`` env var, resolved via ``get_default_hermes_root()``
-       (handles the Docker custom-root and profile-path cases) — unchanged from
-       before.
-    3. ``Path.home()`` itself. The hosted container entrypoint
-       (docker/main-wrapper.sh, docker/s6-rc.d/dashboard/run) independently
-       pins ``HOME=/opt/data`` before HERMES_HOME is ever read, specifically so
-       libraries that resolve paths via Path.home() land on the managed data
-       volume, not the read-only code root. If HERMES_HOME and any
-       request-scoped override are BOTH empty (e.g. HERMES_HOME dropped
-       somewhere in a spawn/exec chain that didn't carry it forward) but HOME
-       still carries that independent pin, trust it rather than falling
-       through to the unlocked ``Path.home()`` policy in
-       ``_managed_files_policy`` — which, in a hosted container, means
-       "browse and try to write to /opt/hermes, the code-install directory"
-       (the exact symptom: file browser shows /opt/hermes, uploads 403).
+    Checks, in order:
+
+    1. Raw ``HERMES_HOME`` env var, resolved via ``get_default_hermes_root()``
+       (handles Docker custom-root and profile-path parent-walk) — original
+       pre-bug behavior when the var is present.
+    2. ``Path.home()`` when HERMES_HOME is empty. The hosted container
+       entrypoint (docker/main-wrapper.sh, docker/s6-rc.d/dashboard/run)
+       independently pins ``HOME=/opt/data`` before HERMES_HOME is ever
+       read. If HERMES_HOME was dropped in a spawn/exec chain but HOME still
+       carries that pin, trust it rather than unlocking
+       ``_managed_files_policy`` to Path.home()-as-code-install
+       (``/opt/hermes``) — the exact desktop Files 403 symptom.
     """
-    from hermes_constants import get_default_hermes_root, get_hermes_home_override
-
-    override = (get_hermes_home_override() or "").strip()
-    if override:
-        try:
-            return Path(override).expanduser().resolve(strict=False) == _HOSTED_MANAGED_FILES_ROOT
-        except (OSError, RuntimeError):
-            return False
+    from hermes_constants import get_default_hermes_root
 
     raw = os.environ.get("HERMES_HOME", "").strip()
     if raw:
