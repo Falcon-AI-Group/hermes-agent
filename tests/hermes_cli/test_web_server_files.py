@@ -333,6 +333,71 @@ def test_hosted_policy_locks_to_opt_data(monkeypatch):
     assert policy.can_change_path is False
 
 
+def test_hosted_policy_survives_empty_hermes_home_via_home_pin(monkeypatch, tmp_path):
+    """Reproduces the desktop file-drop bug (2026-07-22, see
+    PLAN__hermes_desktop_file_drop_path_regression__2026-07-22.md).
+
+    In the hosted container, HERMES_HOME can be empty in os.environ at
+    request time (e.g. dropped somewhere in a spawn/exec chain that didn't
+    carry it forward), even though HOME is independently, redundantly pinned
+    to the managed root by both docker/main-wrapper.sh and
+    docker/s6-rc.d/dashboard/run *before* HERMES_HOME is ever read. Before the
+    fix, _default_hermes_root_is_opt_data() short-circuited on the empty raw
+    env var and _managed_files_policy() fell through to the UNLOCKED
+    Path.home()-rooted policy — which, in the real container, resolves to
+    /opt/hermes (the read-only code-install dir): the file browser panel
+    showed /opt/hermes and uploads 403'd.
+
+    Exercises the actual source(env) -> wire(listing + resolve) ->
+    consumer(disk write) path end to end, not just the predicate in
+    isolation: first the same GET /api/files call FilesPage.tsx's initial
+    load() issues (trusting whatever `path` the server reports as
+    activePath, exactly like the client), then an upload-stream call built
+    from that server-reported path (exactly like uploadFiles()'s
+    joinPath(activePath, file.name)) — and asserts the file actually lands
+    under the locked managed root, not under Path.home().
+    """
+    hosted_root = tmp_path / "opt_data_equiv"
+    hosted_root.mkdir()
+
+    # Stand in for the container's /opt/data: monkeypatch the module
+    # constant (not the real /opt/data — this test must not require root or
+    # touch a real filesystem root) and pin HOME to it, mirroring what the
+    # real container entrypoints do. HERMES_HOME is left unset — that's the
+    # bug trigger.
+    monkeypatch.setattr(web_server, "_HOSTED_MANAGED_FILES_ROOT", hosted_root)
+    monkeypatch.delenv("HERMES_DASHBOARD_FILES_ROOT", raising=False)
+    monkeypatch.delenv("HERMES_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(hosted_root))
+
+    client, prev_auth_required, prev_bound_host = _client_with_app_state()
+    try:
+        listing = client.get("/api/files")
+        assert listing.status_code == 200
+        body = listing.json()
+        # Before the fix: path/locked_root would be Path.home() itself with
+        # locked_root=None, can_change_path=True (the unlocked fallback).
+        assert body["path"] == str(hosted_root)
+        assert body["locked_root"] == str(hosted_root)
+        assert body["can_change_path"] is False
+        active_path = body["path"]
+
+        upload = client.post(
+            "/api/files/upload-stream",
+            data={"path": f"{active_path}/dropped.txt", "overwrite": "true"},
+            files={"file": ("dropped.txt", b"hello from desktop drop")},
+        )
+        assert upload.status_code == 200, upload.text
+        assert upload.json()["locked_root"] == str(hosted_root)
+
+        target = hosted_root / "dropped.txt"
+        assert target.exists()
+        assert target.read_bytes() == b"hello from desktop drop"
+    finally:
+        _close_client(client)
+        _restore_app_state(prev_auth_required, prev_bound_host)
+
+
 # ---------------------------------------------------------------------------
 # Streaming multipart upload (/api/files/upload-stream) — NS-501
 # ---------------------------------------------------------------------------

@@ -1447,16 +1447,55 @@ def _local_dashboard_request(request: Request) -> bool:
 
 
 def _default_hermes_root_is_opt_data() -> bool:
-    raw = os.environ.get("HERMES_HOME", "").strip()
-    if not raw:
-        return False
-    try:
-        from hermes_constants import get_default_hermes_root
+    """True when this deployment's Hermes root is the hosted /opt/data layout.
 
-        root = get_default_hermes_root().expanduser().resolve(strict=False)
+    Checked in order, each a progressively weaker signal:
+
+    1. The request/task-scoped HERMES_HOME override (``set_hermes_home_override``,
+       ``hermes_constants.py``). This is the same seam ``get_hermes_home()``
+       honors everywhere else it's consumed (config, skills, cron — see
+       ``_profile_scope``/``_config_profile_scope`` in this module). Previously
+       this function read raw ``os.environ`` only, so a profile-scoped override
+       could never flip it — an asymmetry vs. every other HERMES_HOME consumer
+       (2026-07-22 desktop file-drop investigation,
+       PLAN__hermes_desktop_file_drop_path_regression__2026-07-22.md).
+    2. The raw ``HERMES_HOME`` env var, resolved via ``get_default_hermes_root()``
+       (handles the Docker custom-root and profile-path cases) — unchanged from
+       before.
+    3. ``Path.home()`` itself. The hosted container entrypoint
+       (docker/main-wrapper.sh, docker/s6-rc.d/dashboard/run) independently
+       pins ``HOME=/opt/data`` before HERMES_HOME is ever read, specifically so
+       libraries that resolve paths via Path.home() land on the managed data
+       volume, not the read-only code root. If HERMES_HOME and any
+       request-scoped override are BOTH empty (e.g. HERMES_HOME dropped
+       somewhere in a spawn/exec chain that didn't carry it forward) but HOME
+       still carries that independent pin, trust it rather than falling
+       through to the unlocked ``Path.home()`` policy in
+       ``_managed_files_policy`` — which, in a hosted container, means
+       "browse and try to write to /opt/hermes, the code-install directory"
+       (the exact symptom: file browser shows /opt/hermes, uploads 403).
+    """
+    from hermes_constants import get_default_hermes_root, get_hermes_home_override
+
+    override = (get_hermes_home_override() or "").strip()
+    if override:
+        try:
+            return Path(override).expanduser().resolve(strict=False) == _HOSTED_MANAGED_FILES_ROOT
+        except (OSError, RuntimeError):
+            return False
+
+    raw = os.environ.get("HERMES_HOME", "").strip()
+    if raw:
+        try:
+            root = get_default_hermes_root().expanduser().resolve(strict=False)
+        except (OSError, RuntimeError):
+            root = Path(raw).expanduser().resolve(strict=False)
+        return root == _HOSTED_MANAGED_FILES_ROOT
+
+    try:
+        return Path.home().resolve(strict=False) == _HOSTED_MANAGED_FILES_ROOT
     except (OSError, RuntimeError):
-        root = Path(raw).expanduser().resolve(strict=False)
-    return root == _HOSTED_MANAGED_FILES_ROOT
+        return False
 
 
 def _dashboard_local_update_managed_externally() -> bool:
